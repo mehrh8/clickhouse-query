@@ -1,1 +1,1 @@
-# pyclickhouse
+# ClickHouse Query
