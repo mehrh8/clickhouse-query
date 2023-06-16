@@ -13,8 +13,39 @@ class ASMixin:
     def get_as(self):
         return getattr(self, "_as", None)
 
+class ArithmeticMixin:
+    def __add__(self, other):
+        from .arithmetic import Plus
+        return Plus(self, other)
 
-class Func(ASMixin):
+    def __sub__(self, other):
+        from .arithmetic import Minus
+        return Minus(self, other)
+    
+    def __mul__(self, other):
+        from .arithmetic import Multiply
+        return Multiply(self, other)
+    
+    def __truediv__(self, other):
+        from .arithmetic import Divide
+        return Divide(self, other)
+    
+    def __floordiv__(self, other):
+        from .arithmetic import IntDiv
+        # TODO: cast self to Float64
+        return IntDiv(self, other)
+    
+    def __mod__(self, other):
+        from .arithmetic import Modulo
+        return Modulo(self, other)
+
+    def __neg__(self):
+        from .arithmetic import Negate
+        return Negate(self)
+
+
+
+class Func(ASMixin, ArithmeticMixin):
     function = None
 
     def __init__(self, *args):
@@ -85,12 +116,41 @@ class _AggFunc2Args(AggFunc):
         super().__init__(arg1, arg2, if_=if_)
 
 
-class F(ASMixin):
+class F(ASMixin, ArithmeticMixin):
     def __init__(self, arg):
-        self.arg = arg
+        self.arg = arg.split("__") if isinstance(arg, str) else arg
 
     def __sql__(self):
-        return str(self.arg)
+        field, *operators = self.arg
+        for op in operators:
+            if op[0] == "_": # nested
+                field += "." + op[1:]
+            elif op == "date":
+                pass
+            elif op == "year":
+                pass
+            elif op == "month":
+                pass
+            elif op == "day":
+                pass
+            elif op == "week":
+                pass
+            elif op == "week_day":
+                pass
+            elif op == "quarter":
+                pass
+            elif op == "time":
+                pass
+            elif op == "hour":
+                pass
+            elif op == "minute":
+                pass
+            elif op == "second":
+                pass
+            else:
+                raise Exception("Field operator is not valid.")
+
+        return str(field)
 
 class Value(ASMixin):
     def __init__(self, arg):

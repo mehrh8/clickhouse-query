@@ -1,3 +1,3 @@
-from .query import Query
+from .query import QuerySet
 
-__all__ = ["Query"]
+__all__ = ["QuerySet"]
