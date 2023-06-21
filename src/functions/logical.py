@@ -1,10 +1,16 @@
 from . import base
+from . utils import extract_q
 
 class _Logical(base.Func):
+    def __init__(self, *args, **kwargs):
+        self.kwargs = kwargs
+        super().__init__(*args)
+
     def __sql__(self):
-        if len(self.args) == 1:
+        additional_args = [extract_q(item, value) for item, value in self.kwargs.items()]
+        if len(self.args) + len(additional_args) == 1:
             return base.get_sql(self.args[0])
-        return super().__sql__()
+        return super().__sql__(*additional_args)
 
 class And(_Logical):
     function = "and"

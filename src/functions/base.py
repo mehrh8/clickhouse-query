@@ -1,9 +1,4 @@
-def get_sql(arg):
-    if isinstance(arg, str):
-        return "'{}'".format(arg)
-    if isinstance(arg, (int, float)):
-        return str(arg)
-    return arg.__sql__()
+from .utils import apply_operator, get_sql
 
 class ASMixin:
     def as_(self, as_):
@@ -115,6 +110,16 @@ class _AggFunc2Args(AggFunc):
     def __init__(self, arg1, arg2, *, if_=None):
         super().__init__(arg1, arg2, if_=if_)
 
+class _F:
+    def __init__(self, arg):
+        self.arg = arg
+    
+    def __sql__(self):
+        return str(self.arg)
+    
+    def add(self, arg):
+        return _F(self.arg + arg)
+
 
 class F(ASMixin, ArithmeticMixin):
     def __init__(self, arg):
@@ -122,35 +127,16 @@ class F(ASMixin, ArithmeticMixin):
 
     def __sql__(self):
         field, *operators = self.arg
+        field = _F(field)
         for op in operators:
-            if op[0] == "_": # nested
-                field += "." + op[1:]
-            elif op == "date":
-                pass
-            elif op == "year":
-                pass
-            elif op == "month":
-                pass
-            elif op == "day":
-                pass
-            elif op == "week":
-                pass
-            elif op == "week_day":
-                pass
-            elif op == "quarter":
-                pass
-            elif op == "time":
-                pass
-            elif op == "hour":
-                pass
-            elif op == "minute":
-                pass
-            elif op == "second":
-                pass
-            else:
-                raise Exception("Field operator is not valid.")
+            field = apply_operator(field, op)
+        sql = get_sql(field)
 
-        return str(field)
+        as_ = self.get_as()
+        if as_ is not None:
+            sql += " AS {}".format(as_)
+
+        return sql
 
 class Value(ASMixin):
     def __init__(self, arg):
@@ -164,3 +150,9 @@ class _Null:
         return "NULL"
 
 NULL = _Null()
+
+class Lambda(Func):
+    function = "lambda"
+
+    def __init__(self, x, expr):
+        super().__init__(x, expr)

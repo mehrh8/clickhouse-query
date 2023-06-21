@@ -1,45 +1,6 @@
 from ..functions import base
 from .. import functions as func
-
-def _extract_condition(item, value):
-    *_field, op = item.split("__")
-
-    field = func.F(_field)
-    if op == "contains":
-        pass
-    elif op == "icontains":
-        pass
-    elif op == "in":
-        pass
-    elif op == "gt":
-        condition = func.Greater(field, value)
-    elif op == "gte":
-        condition = func.GreaterOrEquals(field, value)
-    elif op == "lt":
-        condition = func.Less(field, value)
-    elif op == "lte":
-        condition = func.LessOrEquals(field, value)
-    elif op == "startswith":
-        pass
-    elif op == "istartswith":
-        pass
-    elif op == "endswith":
-        pass
-    elif op == "iendswith":
-        pass
-    elif op == "range":
-        pass
-    elif op == "isnull":
-        pass
-    elif op == "regex":
-        pass
-    elif op == "iregex":
-        pass
-    else: # equals
-        field = func.F(_field + [op])
-        condition = func.Equals(field, value)
-
-    return condition
+from ..functions.utils import extract_q
 
 
 class QuerySet:
@@ -72,12 +33,12 @@ class QuerySet:
         return self
 
     def prewhere(self, *args, **kwargs):
-        new_args = list(args) + [_extract_condition(k, v) for k, v in kwargs.items()]
+        new_args = list(args) + [extract_q(k, v) for k, v in kwargs.items()]
         self._prewhere_list = new_args
         return self
 
     def where(self, *args, **kwargs):
-        new_args = list(args) + [_extract_condition(k, v) for k, v in kwargs.items()]
+        new_args = list(args) + [extract_q(k, v) for k, v in kwargs.items()]
         self._where_list = new_args
         return self
 
@@ -86,7 +47,7 @@ class QuerySet:
         return self
 
     def having(self, *args, **kwargs):
-        new_args = list(args) + [_extract_condition(k, v) for k, v in kwargs.items()]
+        new_args = list(args) + [extract_q(k, v) for k, v in kwargs.items()]
         self._having_list = new_args
         return self
     
