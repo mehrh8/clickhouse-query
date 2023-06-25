@@ -1,11 +1,20 @@
 from ..functions import base
 from .. import functions as func
-from ..functions.utils import extract_q
+from ..functions.utils import extract_q, get_sql
+
+class _U:
+    _u = 0
+
+    @classmethod
+    @property
+    def u(cls):
+        cls._u += 1
+        return "__U_{u}".format(u=cls._u)
+
 
 
 class QuerySet:
-    def __init__(self, database):
-        self.database = database
+    def __init__(self):
         self._from = None
         self._select_list = []
         self._distinct = False
@@ -162,3 +171,34 @@ class QuerySet:
 
     def run(self):
         pass
+
+
+class Table:
+    class Meta:
+        pass
+
+    def __init__(self):
+        self._as = _U.u
+        self._joins = []
+
+    @property
+    def queryset(self):
+        return QuerySet().from_(self)
+
+    def get_as(self):
+        return self._as
+    
+    def get_table(self):
+        return getattr(self.Meta, "table_name")
+
+    def inner_join(self, other, on=None, using=None):
+        self._joins.append(base.InnerJoin(other, on=on, using=using))
+        return self
+    
+    def __sql__(self):
+        sql = "{table} AS {as_}".format(table=self.get_table(), as_=self.get_as())
+
+        for join in self._joins:
+            sql += " {join}".format(join=get_sql(join))
+
+        return sql

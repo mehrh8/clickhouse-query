@@ -62,20 +62,23 @@ class Func(ASMixin, ArithmeticMixin):
 class AggFunc(Func):
     suffix_order = ["If"]
 
-    def __init__(self, *args, if_=None):
-        self.if_ = if_
+    def __init__(self, *args):
         super().__init__(*args)
+    
+    def if_(self, if_):
+        self._if = if_
+        return self
 
     @property
     def suffix_dict(self):
         suffix_dict = {}
-        if self.if_ is not None:
-            suffix_dict["if"] = self.if_
+        if getattr(self, "_if", None) is not None:
+            suffix_dict["If"] = self._if
         return suffix_dict
 
     def __sql__(self):
         additional_args = [
-            self.suffix_dict[suffix_name] for suffix_name in self.suffix_order if self.suffix_dict[suffix_name] is not None
+            self.suffix_dict[suffix_name] for suffix_name in self.suffix_order if self.suffix_dict.get(suffix_name) is not None
         ]
         return super().__sql__(*additional_args)
 
@@ -85,6 +88,18 @@ class AggFunc(Func):
         return function + "".join(
             [suffix_name for suffix_name in self.suffix_order if suffix_name in suffix_dict]
         )
+
+class AggFuncWithParams(AggFunc):
+    def __init__(self, *args, params=None):
+        super().__init__(*args)
+        self.params = params
+
+    def get_function(self):
+        func = super().get_function()
+        if self.params is not None:
+            return "{func}({params})".format(func=func, params=", ".join(map(get_sql, self.params)))
+        return func
+
 
 class _Func0Args(Func):
     def __init__(self):
@@ -99,16 +114,16 @@ class _Func2Args(Func):
         super().__init__(arg1, arg2)
 
 class _AggFunc0Args(AggFunc):
-    def __init__(self, *, if_=None):
-        super().__init__(if_=if_)
+    def __init__(self):
+        super().__init__()
 
 class _AggFunc1Args(AggFunc):
-    def __init__(self, arg, *, if_=None):
-        super().__init__(arg, if_=if_)
+    def __init__(self, arg):
+        super().__init__(arg)
 
 class _AggFunc2Args(AggFunc):
-    def __init__(self, arg1, arg2, *, if_=None):
-        super().__init__(arg1, arg2, if_=if_)
+    def __init__(self, arg1, arg2):
+        super().__init__(arg1, arg2)
 
 class _F:
     def __init__(self, arg):
@@ -156,3 +171,39 @@ class Lambda(Func):
 
     def __init__(self, x, expr):
         super().__init__(x, expr)
+
+class Distinct(Func):
+    function = "distinct"
+
+
+class Join:
+    join_type = None
+
+    def __init__(self, table, on=None, using=None):
+        self.table = table
+        self._on = on
+        self._using = using
+    
+    def on(self, on):
+        self._on = on
+        return self
+    
+    def using(self, *args):
+        self._using = args
+        return self
+
+    def __sql__(self):
+        sql = "{join_type} {table}".format(
+            join_type=self.join_type, table=get_sql(self.table)
+        )
+        assert self._on is None or self._using is None
+        
+        if self._on is not None:
+            sql += " ON {on}".format(on=get_sql(self._on))
+        elif self._using is not None:
+            sql += " USING ({using})".format(using=", ".join(map(get_sql, self._using)))
+
+        return sql
+
+class InnerJoin(Join):
+    join_type = "INNER JOIN"
