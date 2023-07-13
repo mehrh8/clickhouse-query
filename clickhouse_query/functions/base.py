@@ -1,21 +1,18 @@
-from clickhouse_query.utils import get_sql, ASMixin, ArithmeticMixin
+from clickhouse_query.utils import get_sql, ASMixin, ArithmeticMixin, ExpressionMixin, get_expression
 
-class Func(ASMixin, ArithmeticMixin):
+class Func(ASMixin, ArithmeticMixin, ExpressionMixin):
     function = None
 
     def __init__(self, *args):
-        self.args = args
+        self.args = [get_expression(arg) for arg in args]
 
-    def __sql__(self, *additional_args):
+    def __sql__(self, *additional_args, params):
         sql =  "{func}({args})".format(
-            func=self.get_function(), args=", ".join(map(get_sql, self.args + additional_args))
+            func=self.get_function(params=params), args=", ".join([get_sql(a, params=params) for a in self.args + list(additional_args)])
         )
-        as_ = self.get_as()
-        if as_ is not None:
-            sql += " AS {}".format(as_)
         return sql
 
-    def get_function(self):
+    def get_function(self, params):
         assert self.function is not None
         return self.function
 
