@@ -1,5 +1,6 @@
 from clickhouse_query.utils import get_sql, ASMixin, ArithmeticMixin
 
+
 class Func(ASMixin, ArithmeticMixin):
     function = None
 
@@ -7,7 +8,7 @@ class Func(ASMixin, ArithmeticMixin):
         self.args = args
 
     def __sql__(self, *additional_args):
-        sql =  "{func}({args})".format(
+        sql = "{func}({args})".format(
             func=self.get_function(), args=", ".join(map(get_sql, self.args + additional_args))
         )
         as_ = self.get_as()
@@ -24,13 +25,20 @@ class _Func0Args(Func):
     def __init__(self):
         super().__init__()
 
+
 class _Func1Args(Func):
     def __init__(self, arg):
         super().__init__(arg)
 
+
 class _Func2Args(Func):
     def __init__(self, arg1, arg2):
         super().__init__(arg1, arg2)
+
+
+class _FuncListArgs(Func):
+    def __init__(self, *args):
+        super().__init__(*args)
 
 
 class Lambda(Func):
@@ -38,6 +46,7 @@ class Lambda(Func):
 
     def __init__(self, x, expr):
         super().__init__(x, expr)
+
 
 class Distinct(Func):
     function = "distinct"

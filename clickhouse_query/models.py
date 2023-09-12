@@ -40,6 +40,14 @@ class QuerySet:
         self._where_list = new_args
         return self
 
+    def where_filter(self, *args, **kwargs):
+        new_args = list(args)
+        if self._where_list:
+            self._where_list += new_args
+        else:
+            self._where_list = new_args
+        return self
+
     def group_by(self, *args):
         self._group_by_list = [F(arg) if isinstance(arg, str) else arg for arg in args]
         return self
