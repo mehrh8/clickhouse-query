@@ -186,6 +186,10 @@ class Table(ASMixin):
     def inner_join(self, other, on=None, using=None):
         self._joins.append(InnerJoin(other, on=on, using=using))
         return self
+
+    def global_inner_join(self, other, on=None, using=None):
+        self._joins.append(GlobalInnerJoin(other, on=on, using=using))
+        return self
     
     def __sql__(self):
         sql = "{table} AS {as_}".format(table=self.get_table(), as_=self.get_as())
@@ -267,3 +271,6 @@ class _Join:
 
 class InnerJoin(_Join):
     join_type = "INNER JOIN"
+
+class GlobalInnerJoin(_Join):
+    join_type = "GLOBAL INNER JOIN"
