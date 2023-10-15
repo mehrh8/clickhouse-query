@@ -1,5 +1,4 @@
-from clickhouse_query import functions
-from clickhouse_query.utils import extract_q, get_sql, ASMixin, GetAs, ExpressionMixin, get_expression, F, JoinableMixin, get_expression_or_f
+from clickhouse_query import functions, mixins, utils
 
 
 class QuerySet:
@@ -22,7 +21,7 @@ class QuerySet:
     def select(self, *select):
         self._select_list = list(select)
         return self
-    
+
     def distinct(self, *distinct):
         self._distinct = True
         self._distinct_on_list = list(distinct)
@@ -50,7 +49,7 @@ class QuerySet:
         self._having_list = list(args)
         self._having_dict = dict(kwargs)
         return self
-    
+
     def order_by(self, *order_by):
         self._order_by_list = list(order_by)
         return self
@@ -63,135 +62,217 @@ class QuerySet:
         assert len(by) != 0
         self._limit_by = (limit, offset, list(by))
         return self
-    
-    def _get_raw_distinct(self, params):
+
+    def _get_raw_distinct(self, sql_params):
         if not self._distinct:
             return ""
         raw_distinct = " DISTINCT"
         if self._distinct_on_list:
-            raw_distinct += " ON ({})".format(", ".join([get_sql(get_expression_or_f(d), params=params) for d in self._distinct_on_list]))
+            raw_distinct += " ON ({})".format(
+                ", ".join(
+                    [
+                        utils._get_sql(utils._get_field_or_expression(d), sql_params=sql_params)
+                        for d in self._distinct_on_list
+                    ]
+                )
+            )
         return raw_distinct
 
-    def _get_raw_select(self, params):
+    def _get_raw_select(self, sql_params):
         if not self._select_list:
             return " *"
-        raw_select = " {}".format(", ".join([get_sql(get_expression_or_f(s), params=params) for s in self._select_list]))
+        raw_select = " {}".format(
+            ", ".join(
+                [
+                    utils._get_sql(utils._get_field_or_expression(s), sql_params=sql_params)
+                    for s in self._select_list
+                ]
+            )
+        )
         return raw_select
 
-    def _get_raw_from(self, params):
+    def _get_raw_from(self, sql_params):
         if self._from is None:
             return ""
-        return " FROM {}".format(get_sql(get_expression_or_f(self._from), params=params))
-    
-    def _get_raw_prewhere(self, params):
-        _list = self._prewhere_list + [extract_q(k, get_expression(v)) for k, v in self._prewhere_dict.items()]
+        return " FROM {}".format(
+            utils._get_sql(utils._get_field_or_expression(self._from), sql_params=sql_params)
+        )
+
+    def _get_raw_prewhere(self, sql_params):
+        _list = self._prewhere_list + [
+            utils._extract_condition(k, utils._get_expression(v)) for k, v in self._prewhere_dict.items()
+        ]
 
         if not _list:
             return ""
-        raw_prewhere = " PREWHERE {}".format(get_sql(functions.And(*_list), params=params))
+        raw_prewhere = " PREWHERE {}".format(utils._get_sql(functions.And(*_list), sql_params=sql_params))
         return raw_prewhere
 
-    def _get_raw_where(self, params):
-        _list = self._where_list + [extract_q(k, get_expression(v)) for k, v in self._where_dict.items()]
+    def _get_raw_where(self, sql_params):
+        _list = self._where_list + [
+            utils._extract_condition(k, utils._get_expression(v)) for k, v in self._where_dict.items()
+        ]
 
         if not _list:
             return ""
-        raw_where = " WHERE {}".format(get_sql(functions.And(*_list), params=params))
+        raw_where = " WHERE {}".format(utils._get_sql(functions.And(*_list), sql_params=sql_params))
         return raw_where
-    
-    def _get_raw_group_by(self, params):
+
+    def _get_raw_group_by(self, sql_params):
         if not self._group_by_list:
             return ""
-        raw_group_by = " GROUP BY {}".format(", ".join([get_sql(get_expression_or_f(g), params=params) for g in self._group_by_list]))
+        raw_group_by = " GROUP BY {}".format(
+            ", ".join(
+                [
+                    utils._get_sql(utils._get_field_or_expression(g), sql_params=sql_params)
+                    for g in self._group_by_list
+                ]
+            )
+        )
         return raw_group_by
-    
-    def _get_raw_having(self, params):
-        _list = self._having_list + [extract_q(k, get_expression(v)) for k, v in self._having_dict.items()]
+
+    def _get_raw_having(self, sql_params):
+        _list = self._having_list + [
+            utils._extract_condition(k, utils._get_expression(v)) for k, v in self._having_dict.items()
+        ]
 
         if not _list:
             return ""
-        raw_having = " HAVING {}".format(get_sql(functions.And(*_list), params=params))
+        raw_having = " HAVING {}".format(utils._get_sql(functions.And(*_list), sql_params=sql_params))
         return raw_having
-    
-    def _get_raw_order_by(self, params):
+
+    def _get_raw_order_by(self, sql_params):
         if not self._order_by_list:
             return ""
-        raw_order_by = " ORDER BY {}".format(", ".join([get_sql(get_expression_or_f(o), params=params) for o in self._order_by_list]))
+        raw_order_by = " ORDER BY {}".format(
+            ", ".join(
+                [
+                    utils._get_sql(utils._get_field_or_expression(o), sql_params=sql_params)
+                    for o in self._order_by_list
+                ]
+            )
+        )
         return raw_order_by
 
-    def _get_raw_limit_by(self, params):
+    def _get_raw_limit_by(self, sql_params):
         if self._limit_by is None:
             return ""
         limit, offset, by = self._limit_by
-        raw_limit_by = " LIMIT {}".format(get_sql(get_expression(limit), params=params))
+        raw_limit_by = " LIMIT {}".format(utils._get_sql(utils._get_expression(limit), sql_params=sql_params))
         if offset is not None:
-            raw_limit_by += " OFFSET {}".format(get_sql(get_expression(offset), params=params))
-        raw_limit_by += " BY {}".format(", ".join([get_sql(get_expression_or_f(b), params=params) for b in by]))
+            raw_limit_by += " OFFSET {}".format(
+                utils._get_sql(utils._get_expression(offset), sql_params=sql_params)
+            )
+        raw_limit_by += " BY {}".format(
+            ", ".join([utils._get_sql(utils._get_field_or_expression(b), sql_params=sql_params) for b in by])
+        )
         return raw_limit_by
-    
-    def _get_raw_limit(self, params):
+
+    def _get_raw_limit(self, sql_params):
         if self._limit is None:
             return ""
         limit, offset = self._limit
-        raw_limit = " LIMIT {}".format(get_sql(get_expression(limit), params=params))
+        raw_limit = " LIMIT {}".format(utils._get_sql(utils._get_expression(limit), sql_params=sql_params))
         if offset is not None:
-            raw_limit += " OFFSET {}".format(get_sql(get_expression(offset), params=params))
+            raw_limit += " OFFSET {}".format(
+                utils._get_sql(utils._get_expression(offset), sql_params=sql_params)
+            )
         return raw_limit
 
-    def __sql__(self, params):
-        str_format = "SELECT{distinct}{select}{from_}{prewhere}{where}{group_by}{having}{order_by}{limit_by}{limit}"
+    def __sql__(self, sql_params):
+        str_format = (
+            "SELECT{distinct}{select}{from_}{prewhere}{where}{group_by}{having}{order_by}{limit_by}{limit}"
+        )
         return str_format.format(
-            distinct=self._get_raw_distinct(params=params),
-            select=self._get_raw_select(params=params),
-            from_=self._get_raw_from(params=params),
-            prewhere=self._get_raw_prewhere(params=params),
-            where=self._get_raw_where(params=params),
-            group_by=self._get_raw_group_by(params=params),
-            having=self._get_raw_having(params=params),
-            order_by=self._get_raw_order_by(params=params),
-            limit_by=self._get_raw_limit_by(params=params),
-            limit=self._get_raw_limit(params=params),
+            distinct=self._get_raw_distinct(sql_params=sql_params),
+            select=self._get_raw_select(sql_params=sql_params),
+            from_=self._get_raw_from(sql_params=sql_params),
+            prewhere=self._get_raw_prewhere(sql_params=sql_params),
+            where=self._get_raw_where(sql_params=sql_params),
+            group_by=self._get_raw_group_by(sql_params=sql_params),
+            having=self._get_raw_having(sql_params=sql_params),
+            order_by=self._get_raw_order_by(sql_params=sql_params),
+            limit_by=self._get_raw_limit_by(sql_params=sql_params),
+            limit=self._get_raw_limit(sql_params=sql_params),
         )
 
     def run(self, settings=None):
-        params = {}
-        sql = get_sql(self, params=params)
-        print(sql, params)
+        sql_params = {}
+        sql = utils._get_sql(self, sql_params=sql_params)
+        print(sql, sql_params)
 
 
+class Table(mixins.ASMixin, mixins.JoinableMixin, mixins.ExpressionMixin):
+    _AS_FORCE = True
 
-class Table(ASMixin, JoinableMixin, ExpressionMixin):
     class Meta:
         pass
-
-    def get_as(self):
-        as_ = super().get_as()
-        if as_ is None:
-            as_ = GetAs.as_
-            self.as_(as_)
-        return as_
 
     @property
     def queryset(self):
         return QuerySet().from_(self)
-    
-    def get_table(self, params):
+
+    def get_table(self, sql_params):
         return getattr(self.Meta, "table_name")
 
-    def __sql__(self, params):
-        sql = self.get_table(params=params)
+    def __sql__(self, sql_params):
+        sql = self.get_table(sql_params=sql_params)
         return sql
-
-class _Null(ExpressionMixin):
-    def __sql__(self, params):
-        return "NULL"
-
-NULL = _Null()
 
 
 class Subquery(Table):
     def __init__(self, inner_queryset):
         self._inner_queryset = inner_queryset
 
-    def get_table(self, params):
-        return "({inner_queryset})".format(inner_queryset=get_sql(self._inner_queryset, params=params))
+    def get_table(self, sql_params):
+        return "({inner_queryset})".format(
+            inner_queryset=utils._get_sql(self._inner_queryset, sql_params=sql_params)
+        )
+
+
+class _Null(mixins.ExpressionMixin):
+    def __sql__(self, sql_params):
+        return "NULL"
+
+
+NULL = _Null()
+
+
+class _F:
+    def __init__(self, arg):
+        self.arg = arg
+
+    def __sql__(self, sql_params):
+        return str(self.arg)
+
+    def add(self, arg):
+        return _F(self.arg + arg)
+
+
+class F(mixins.ASMixin, mixins.ArithmeticMixin, mixins.ExpressionMixin):
+    def __init__(self, arg):
+        self.arg = arg.split("__") if isinstance(arg, str) else arg
+
+    def __sql__(self, sql_params):
+        field, *operators = self.arg
+        field = _F(field)
+        for op in operators:
+            field = utils._apply_operator(field, op)
+        sql = utils._get_sql(field, sql_params=sql_params)
+
+        return sql
+
+
+class Value(mixins.ASMixin, mixins.ArithmeticMixin, mixins.ExpressionMixin):
+    def __init__(self, arg):
+        self.arg = arg
+
+    def __sql__(self, sql_params):
+        p = utils._GetP.p
+        if isinstance(self.arg, str):
+            sql_params[p] = self.arg
+            return "%({p})s".format(p=p)
+        if isinstance(self.arg, (int, float)):
+            sql_params[p] = self.arg
+            return "%({p})f".format(p=p)
+        raise Exception("Value not Valid")
