@@ -19,7 +19,7 @@ class QuerySet:
         self._limit_by = None
 
     def select(self, *select):
-        self._select_list = list(select)
+        self._select_list = self._select_list + list(select)
         return self
 
     def distinct(self, *distinct):
@@ -42,7 +42,7 @@ class QuerySet:
         return self
 
     def group_by(self, *group_by):
-        self._group_by_list = list(group_by)
+        self._group_by_list = self._group_by_list + list(group_by)
         return self
 
     def having(self, *args, **kwargs):
@@ -51,7 +51,7 @@ class QuerySet:
         return self
 
     def order_by(self, *order_by):
-        self._order_by_list = list(order_by)
+        self._order_by_list = self._order_by_list + list(order_by)
         return self
 
     def limit(self, limit, *, offset=None):
