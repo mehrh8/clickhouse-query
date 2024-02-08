@@ -1,3 +1,43 @@
 [build-system]
 requires = ['setuptools>=42']
 build-backend = 'setuptools.build_meta'
+
+[tool.black]
+target-version = ['py310']
+line-length = 110
+force-exclude = '''
+/(
+    \.git
+  | \.env
+  | \.venv
+  | venv
+  | \.history
+  | \.vscode
+  | \.idea
+  | \.local
+)/
+'''
+
+[tool.ruff]
+target-version = "py310"
+line-length = 110
+select = ["E", "F", "T", "W", "C4", "B0", "B905", "I"]
+exclude = [
+    ".git",
+    ".venv",
+    "venv",
+    ".env",
+    ".history",
+    ".vscode",
+    ".idea",
+    ".local",
+]
+ignore = [
+    "F403", # Unable to detect undefined names
+    "E402", # Module level import not at top of file
+    "E501", # Line lengths are recommended to be no greater than 79 characters.
+    "E722", # Do not use bare except, specify exception instead
+    "E731", # Do not assign a `lambda` expression, use a `def`
+    "B008", # Do not perform function call in argument defaults
+    "B026", # Star-arg unpacking after a keyword argument is strongly discouraged
+]

@@ -1,66 +1,74 @@
-from clickhouse_query.functions import base
 from clickhouse_query import utils
+from clickhouse_query.functions import base
 
 
-class AggFunc(base.Func):
-    suffix_order = ["If"]
+class AggregationFunction(base.Function):
+    combinators_order = ["If"]
 
-    def __init__(self, *args):
-        super().__init__(*args)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.combinator_dict = {}
+
+    def __clickhouse_query_function_sql__(self, *, uid_generator):
+        function_sql, function_sql_params = super().__clickhouse_query_function_sql__(
+            uid_generator=uid_generator
+        )
+        for combinator in self.combinators_order:
+            if combinator in self.combinator_dict:
+                function_sql += "{combinator}".format(combinator=combinator)
+
+        return function_sql, function_sql_params
+
+    def __clickhouse_query_function_args_sqls__(self, *, uid_generator):
+        args_sqls_list, sql_params = super().__clickhouse_query_function_args_sqls__(
+            uid_generator=uid_generator
+        )
+        for combinator in self.combinators_order:
+            if combinator in self.combinator_dict:
+                combinator_function_args = self.combinator_dict[combinator].get("function_args", [])
+                for arg in combinator_function_args:
+                    expression = utils._get_expression(arg)
+                    sql, params = utils.get_sql(expression, uid_generator=uid_generator)
+                    args_sqls_list.append(sql)
+                    sql_params.update(params)
+        return args_sqls_list, sql_params
 
     def if_(self, if_):
-        self._if = utils._get_expression(if_)
+        self.combinator_dict["If"] = {"function_args": [if_]}
         return self
 
-    @property
-    def suffix_dict(self):
-        suffix_dict = {}
-        if getattr(self, "_if", None) is not None:
-            suffix_dict["If"] = self._if
-        return suffix_dict
 
-    def __sql__(self, sql_params):
-        additional_args = [
-            self.suffix_dict[suffix_name]
-            for suffix_name in self.suffix_order
-            if self.suffix_dict.get(suffix_name) is not None
-        ]
-        return super().__sql__(*additional_args, sql_params=sql_params)
-
-    def get_function(self, sql_params):
-        function = super().get_function(sql_params=sql_params)
-        suffix_dict = self.suffix_dict
-        return function + "".join(
-            [suffix_name for suffix_name in self.suffix_order if suffix_name in suffix_dict]
-        )
-
-
-class AggFuncWithParams(AggFunc):
-    def __init__(self, *args, params=None):
+class AggregationFunctionWithParams(AggregationFunction):
+    def __init__(self, *args, agg_params=None):
         super().__init__(*args)
-        self.params = params
+        self.agg_params = agg_params
 
-    def get_function(self, sql_params):
-        # self.params and sql_params is not equals.
-        func = super().get_function(sql_params=sql_params)
-        if self.params is not None:
-            return "{func}({params})".format(
-                func=func,
-                params=", ".join([utils._get_sql(p, sql_params=sql_params) for p in self.params]),
-            )
-        return func
+    def __clickhouse_query_function_sql__(self, *, uid_generator):
+        function_sql, function_sql_params = super().__clickhouse_query_function_sql__(
+            uid_generator=uid_generator
+        )
+        agg_params_sql_list = []
+        if self.agg_params is not None:
+            for agg_param in self.agg_params:
+                expression = utils._get_expression(agg_param)
+                sql, params = utils.get_sql(expression, uid_generator=uid_generator)
+                agg_params_sql_list.append(sql)
+                function_sql_params.update(params)
+
+        function_sql = function_sql + "({agg_params})".format(agg_params=", ".join(agg_params_sql_list))
+        return function_sql, function_sql_params
 
 
-class _AggFunc0Args(AggFunc):
+class _AggregationFunction0Args(AggregationFunction):
     def __init__(self):
         super().__init__()
 
 
-class _AggFunc1Args(AggFunc):
+class _AggregationFunction1Args(AggregationFunction):
     def __init__(self, arg):
         super().__init__(arg)
 
 
-class _AggFunc2Args(AggFunc):
+class _AggregationFunction2Args(AggregationFunction):
     def __init__(self, arg1, arg2):
         super().__init__(arg1, arg2)

@@ -13,6 +13,6 @@ class TableTest(models.Table):
 
 q = TableTest().queryset.select("a", "b").where(a__lt=10)
 
-q._get_sql()
+q.get_sql()
 #  "SELECT a, b FROM table_temp AS __U_1 WHERE less(a, 10);"
 ```

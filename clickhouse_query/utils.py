@@ -1,38 +1,27 @@
-class _GetAs:
-    _u = 0
+class UIDGenerator:
+    def __init__(self, prefix=None):
+        if prefix is None:
+            prefix = ""
+        self.prefix = prefix
+        self.prev_num = 0
 
-    @classmethod
-    @property
-    def as_(cls):
-        cls._u += 1
-        return "__U_{u}".format(u=cls._u)
-
-    @classmethod
-    def reset(cls):
-        cls._u = 0
+    def get(self):
+        self.prev_num += 1
+        return self.prefix + str(self.prev_num)
 
 
-class _GetP:
-    _p = 0
-
-    @classmethod
-    @property
-    def p(cls):
-        cls._p += 1
-        return "__P_{u}".format(u=cls._p)
-
-    @classmethod
-    def reset(cls):
-        cls._p = 0
-
-
-def _get_sql(arg, sql_params):
+def get_sql(arg, uid_generator=None):
     from clickhouse_query import mixins
 
-    sql = arg.__sql__(sql_params=sql_params)
+    if uid_generator is None:
+        uid_generator = UIDGenerator(prefix="__U_")
+
+    sql, sql_params = arg.__sql__(uid_generator=uid_generator)
+
     if isinstance(arg, mixins.ASMixin):
-        sql += arg.__asmixin__()
-    return sql
+        sql += arg.__asmixin__(uid_generator=uid_generator)
+
+    return sql, sql_params
 
 
 def _extract_condition(item, value):
@@ -73,18 +62,8 @@ def _extract_condition(item, value):
         condition = functions.Like(field, functions.Concat(models.Value("%"), value))
     elif op == "iendswith":
         condition = functions.ILike(field, functions.Concat(models.Value("%"), value))
-    elif op == "range":
-        raise NotImplementedError
-        condition = functions.And(
-            functions.GreaterOrEquals(field, value[0]),
-            functions.LessOrEquals(field, value[1]),
-        )
     elif op == "isnull":
         condition = functions.IsNull(field)
-    elif op == "regex":
-        raise NotImplementedError
-    elif op == "iregex":
-        raise NotImplementedError
     else:  # equals
         field = models.F(_field + [op])
         condition = functions.Equals(field, value)
@@ -96,9 +75,7 @@ def _apply_operator(field, op):
     from clickhouse_query import functions
 
     if op[0] == "_":  # nested
-        field = field.add("." + op[1:])
-    elif op == "date":
-        raise NotImplementedError
+        field = field._arg_extend("." + op[1:])
     elif op == "year":
         field = functions.ToYear(field)
     elif op == "month":
@@ -120,13 +97,16 @@ def _apply_operator(field, op):
     elif op == "second":
         field = functions.ToSecond(field)
     else:
-        return field.add("__" + op)
+        # not changed
+        return field._arg_extend("__" + op)
+
+    return field
 
 
 def _get_expression(v):
-    from clickhouse_query import mixins, models
+    from clickhouse_query import models
 
-    if isinstance(v, mixins.ExpressionMixin):
+    if hasattr(v, "__sql__"):
         return v
     return models.Value(v)
 
