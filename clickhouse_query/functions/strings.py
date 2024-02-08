@@ -1,5 +1,5 @@
 from clickhouse_query.functions import base
 
 
-class Concat(base.Func):
+class Concat(base.Function):
     function = "concat"

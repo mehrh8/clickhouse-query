@@ -5,20 +5,20 @@ class ASMixin:
         self._as = as_
         return self
 
-    def _get_as(self):
-        from clickhouse_query import utils
-
+    def _get_as(self, uid_generator):
         as_ = getattr(self, "_as", None)
         if as_ is None and self._AS_FORCE:
-            as_ = utils._GetAs.as_
-            self.as_(as_)
+            if not hasattr(self, "uid_generator_id") or id(uid_generator) != self.uid_generator_id:
+                self.uid_generator_id = id(uid_generator)
+                self.uid = uid_generator.get()
+            return self.uid
         return as_
 
-    def has_as(self):
-        return self._get_as() is not None
+    def has_as(self, uid_generator):
+        return self._get_as(uid_generator=uid_generator) is not None
 
-    def __asmixin__(self):
-        as_ = self._get_as()
+    def __asmixin__(self, uid_generator):
+        as_ = self._get_as(uid_generator=uid_generator)
         if as_ is not None:
             return " AS {as_}".format(as_=as_)
         return ""
@@ -60,17 +60,3 @@ class ArithmeticMixin:
         from . import functions
 
         return functions.Negate(self)
-
-
-class ExpressionMixin:
-    pass
-
-
-class JoinableMixin:
-    def inner_join(self, other, on=None, using=None):
-        from clickhouse_query.joins import InnerJoin
-        from clickhouse_query import utils, models
-
-        if using is not None:
-            using = [models.F(u) if isinstance(u, str) else utils._get_expression(u) for u in using]
-        return InnerJoin(self, other, on=on, using=using)

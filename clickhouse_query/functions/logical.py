@@ -2,22 +2,28 @@ from clickhouse_query import utils
 from clickhouse_query.functions import base
 
 
-class _Logical(base.Func):
-    def __init__(self, *args, **kwargs):
-        self.kwargs = kwargs
-        super().__init__(*args)
+class _Logical(base.Function):
+    def __clickhouse_query_function_sql__(self, *, uid_generator):
+        if len(self.args) + len(self.kwargs) == 0:
+            raise ValueError("At least one argument is required")
 
-    def __sql__(self, sql_params):
-        additional_args = [
-            utils._extract_condition(item, utils._get_expression(value))
-            for item, value in self.kwargs.items()
-        ]
-        if len(self.args) + len(additional_args) == 1:
-            if additional_args:
-                return utils._get_sql(additional_args[0], sql_params=sql_params)
-            else:
-                return utils._get_sql(self.args[0], sql_params=sql_params)
-        return super().__sql__(*additional_args, sql_params=sql_params)
+        if len(self.args) + len(self.kwargs) == 1:
+            return "", {}
+
+        return super().__clickhouse_query_function_sql__(uid_generator=uid_generator)
+
+    def __clickhouse_query_function_args_sqls__(self, *, uid_generator):
+        function_args_sqls_list, function_args_params = super().__clickhouse_query_function_args_sqls__(
+            uid_generator=uid_generator
+        )
+        for item, value in self.kwargs.items():
+            expression = utils._get_expression(value)
+            condition = utils._extract_condition(item, expression)
+            sql, params = utils.get_sql(condition, uid_generator=uid_generator)
+            function_args_sqls_list.append(sql)
+            function_args_params.update(params)
+
+        return function_args_sqls_list, function_args_params
 
 
 class And(_Logical):
@@ -28,7 +34,7 @@ class Or(_Logical):
     function = "or"
 
 
-class Not(base._Func1Args):
+class Not(base._Function1Args):
     function = "not"
 
 
