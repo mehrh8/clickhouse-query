@@ -1,7 +1,7 @@
-from clickhouse_query.functions.aggregate import base as aggregate_base
+from clickhouse_query.functions import base
 
 
-class _AggregationFunctionWithMaxSizeParam(aggregate_base.AggregationFunctionWithParams):
+class _AggregationFunctionWithMaxSizeParam(base.AggregationFunctionWithParams):
     def __init__(self, x, max_size=None):
         if max_size is None:
             super().__init__(x)
@@ -9,7 +9,7 @@ class _AggregationFunctionWithMaxSizeParam(aggregate_base.AggregationFunctionWit
             super().__init__(x, params=[max_size])
 
 
-class Count(aggregate_base.AggregationFunction):
+class Count(base.AggregationFunction):
     function = "count"
 
     def __init__(self, arg=None):
@@ -19,54 +19,54 @@ class Count(aggregate_base.AggregationFunction):
             super().__init__(arg)
 
 
-class Min(aggregate_base._AggregationFunction1Args):
+class Min(base._AggregationFunction1Args):
     function = "min"
 
 
-class Max(aggregate_base._AggregationFunction1Args):
+class Max(base._AggregationFunction1Args):
     function = "max"
 
 
-class Sum(aggregate_base._AggregationFunction1Args):
+class Sum(base._AggregationFunction1Args):
     function = "sum"
 
 
-class Avg(aggregate_base._AggregationFunction1Args):
+class Avg(base._AggregationFunction1Args):
     function = "avg"
 
 
-class Any(aggregate_base._AggregationFunction1Args):
+class Any(base._AggregationFunction1Args):
     function = "any"
 
 
-class FirstValue(aggregate_base._AggregationFunction1Args):
+class FirstValue(base._AggregationFunction1Args):
     function = "first_value"
 
 
-class LastValue(aggregate_base._AggregationFunction1Args):
+class LastValue(base._AggregationFunction1Args):
     function = "last_value"
 
 
-class ArgMin(aggregate_base._AggregationFunction2Args):
+class ArgMin(base._AggregationFunction2Args):
     function = "argMin"
 
 
-class ArgMax(aggregate_base._AggregationFunction2Args):
+class ArgMax(base._AggregationFunction2Args):
     function = "argMax"
 
 
-class AvgWeighted(aggregate_base._AggregationFunction2Args):
+class AvgWeighted(base._AggregationFunction2Args):
     function = "avgWeighted"
 
 
-class TopK(aggregate_base.AggregationFunctionWithParams):
+class TopK(base.AggregationFunctionWithParams):
     function = "topK"
 
     def __init__(self, column, *, k):
         super().__init__(column, params=[k])
 
 
-class TopKWeighted(aggregate_base.AggregationFunctionWithParams):
+class TopKWeighted(base.AggregationFunctionWithParams):
     function = "topKWeighted"
 
     def __init__(self, column, weight, *, k):
@@ -81,7 +81,7 @@ class GroupUniqArray(_AggregationFunctionWithMaxSizeParam):
     function = "groupUniqArray"
 
 
-class GroupArraySample(aggregate_base.AggregationFunctionWithParams):
+class GroupArraySample(base.AggregationFunctionWithParams):
     def __init__(self, arg1, *, max_size, seed=None):
         if seed is None:
             super().__init__(arg1, params=[max_size])
@@ -89,13 +89,13 @@ class GroupArraySample(aggregate_base.AggregationFunctionWithParams):
             super().__init__(arg1, params=[max_size, seed])
 
 
-class SumCount(aggregate_base._AggregationFunction1Args):
+class SumCount(base._AggregationFunction1Args):
     function = "sumCount"
 
 
-class Uniq(aggregate_base.AggregationFunction):
+class Uniq(base.AggregationFunction):
     function = "uniq"
 
 
-class UniqExact(aggregate_base.AggregationFunction):
+class UniqExact(base.AggregationFunction):
     function = "uniqExact"
