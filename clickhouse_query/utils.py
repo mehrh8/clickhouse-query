@@ -113,3 +113,11 @@ def get_expression(v, str_is_field=False):
         return v
 
     return models.Value(v)
+
+
+def is_iterable(obj):
+    try:
+        iter(obj)
+        return True
+    except TypeError:
+        return False

@@ -1,4 +1,5 @@
 import datetime
+from zoneinfo import ZoneInfo
 
 from clickhouse_query import functions, mixins, utils
 
@@ -325,41 +326,28 @@ class F(mixins.ASMixin, mixins.ArithmeticMixin):
         return sql, sql_params
 
 
+def _get_value_sql(arg):
+    if isinstance(arg, str):
+        return "%({uid})s", arg
+
+    if isinstance(arg, (int, float)):
+        return "%({uid})f", arg
+
+    if isinstance(arg, datetime.datetime):
+        return "%({uid})s", arg.astimezone(ZoneInfo("UTC")).strftime("%Y-%m-%d %H:%M:%S.%f")
+
+    if utils.is_iterable(arg):
+        new_arg = tuple(_get_value_sql(a)[1] for a in arg)
+        return "%({uid})s", new_arg
+
+    raise Exception("Value not Valid", arg)
+
+
 class Value(mixins.ASMixin, mixins.ArithmeticMixin):
     def __init__(self, arg):
         self.arg = arg
 
     def __sql__(self, *, uid_generator):
-        if isinstance(self.arg, str):
-            uid = uid_generator.get()
-            return "%({uid})s".format(uid=uid), {uid: self.arg}
-
-        if isinstance(self.arg, (int, float)):
-            uid = uid_generator.get()
-            return "%({uid})f".format(uid=uid), {uid: self.arg}
-
-        if isinstance(self.arg, datetime.datetime):
-            uid1 = uid_generator.get()
-            uid2 = uid_generator.get()
-            tzinfo = self.arg.tzinfo
-            if tzinfo is None:
-                raise Exception("Value not Valid", "tzinfo is not specified", self.arg)
-
-            return "toDateTime64(%({uid1})s, 6, %({uid2})s)".format(uid1=uid1, uid2=uid2), {
-                uid1: self.arg.strftime("%Y-%m-%d %H:%M:%S.%f"),
-                uid2: str(tzinfo),
-            }
-
-        if isinstance(self.arg, datetime.date):
-            uid1 = uid_generator.get()
-            uid2 = uid_generator.get()
-            tzinfo = self.arg.tzinfo
-            if tzinfo is None:
-                raise Exception("Value not Valid", "tzinfo is not specified", self.arg)
-
-            return "toDate32(%({uid1})s, %({uid2})s)".format(uid1=uid1, uid2=uid2), {
-                uid1: self.arg.strftime("%Y-%m-%d"),
-                uid2: str(tzinfo),
-            }
-
-        raise Exception("Value not Valid", self.arg)
+        uid = uid_generator.get()
+        value_sql, value_param = _get_value_sql(self.arg)
+        return value_sql.format(uid=uid), {uid: value_param}
