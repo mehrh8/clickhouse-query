@@ -103,17 +103,13 @@ def _apply_operator(field, op):
     return field
 
 
-def _get_expression(v):
+def get_expression(v, str_is_field=False):
     from clickhouse_query import models
+
+    if str_is_field and isinstance(v, str):
+        return models.F(v)
 
     if hasattr(v, "__sql__"):
         return v
+
     return models.Value(v)
-
-
-def _get_field_or_expression(v):
-    from clickhouse_query import models
-
-    if isinstance(v, str):
-        return models.F(v)
-    return _get_expression(v)

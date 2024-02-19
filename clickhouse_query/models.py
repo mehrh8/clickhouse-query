@@ -75,7 +75,7 @@ class QuerySet:
         if self._distinct_on_list:
             sqls = []
             for item in self._distinct_on_list:
-                expression = utils._get_field_or_expression(item)
+                expression = utils.get_expression(item, str_is_field=True)
                 sql, params = utils.get_sql(expression, uid_generator=uid_generator)
                 sqls.append(sql)
                 sql_params.update(params)
@@ -90,13 +90,13 @@ class QuerySet:
         sql_params = {}
         sqls = []
         for item in self._select_list:
-            expression = utils._get_field_or_expression(item)
+            expression = utils.get_expression(item, str_is_field=True)
             sql, params = utils.get_sql(expression, uid_generator=uid_generator)
             sqls.append(sql)
             sql_params.update(params)
 
         for as_, item in self._select_dict.items():
-            expression = utils._get_field_or_expression(item)
+            expression = utils.get_expression(item, str_is_field=True)
             expression.as_(as_)
             sql, params = utils.get_sql(expression, uid_generator=uid_generator)
             sqls.append(sql)
@@ -109,14 +109,14 @@ class QuerySet:
         if self._from is None:
             return "", {}
 
-        expression = utils._get_field_or_expression(self._from)
+        expression = utils.get_expression(self._from, str_is_field=True)
         sql, sql_params = utils.get_sql(expression, uid_generator=uid_generator)
         from_sql = " FROM {}".format(sql)
         return from_sql, sql_params
 
     def _get_prewhere_sql(self, uid_generator):
 
-        prewhere_dict_expr = {k: utils._get_expression(v) for k, v in self._prewhere_dict.items()}
+        prewhere_dict_expr = {k: utils.get_expression(v) for k, v in self._prewhere_dict.items()}
         prewhere_dict_condition_list = [utils._extract_condition(k, v) for k, v in prewhere_dict_expr.items()]
         condition_list = self._prewhere_list + prewhere_dict_condition_list
 
@@ -128,7 +128,7 @@ class QuerySet:
         return prewhere_sql, sql_params
 
     def _get_where_sql(self, uid_generator):
-        where_dict_expr = {k: utils._get_expression(v) for k, v in self._where_dict.items()}
+        where_dict_expr = {k: utils.get_expression(v) for k, v in self._where_dict.items()}
         where_dict_condition_list = [utils._extract_condition(k, v) for k, v in where_dict_expr.items()]
         condition_list = self._where_list + where_dict_condition_list
 
@@ -146,7 +146,7 @@ class QuerySet:
         sql_params = {}
         sqls = []
         for item in self._group_by_list:
-            expression = utils._get_field_or_expression(item)
+            expression = utils.get_expression(item, str_is_field=True)
             sql, params = utils.get_sql(expression, uid_generator=uid_generator)
             sqls.append(sql)
             sql_params.update(params)
@@ -155,7 +155,7 @@ class QuerySet:
         return group_by_sql, sql_params
 
     def _get_having_sql(self, uid_generator):
-        having_dict_expr = {k: utils._get_expression(v) for k, v in self._having_dict.items()}
+        having_dict_expr = {k: utils.get_expression(v) for k, v in self._having_dict.items()}
         having_dict_condition_list = [utils._extract_condition(k, v) for k, v in having_dict_expr.items()]
         condition_list = self._having_list + having_dict_condition_list
 
@@ -173,7 +173,7 @@ class QuerySet:
         sql_params = {}
         sqls = []
         for item in self._order_by_list:
-            expression = utils._get_field_or_expression(item)
+            expression = utils.get_expression(item, str_is_field=True)
             sql, params = utils.get_sql(expression, uid_generator=uid_generator)
             sqls.append(sql)
             sql_params.update(params)
@@ -188,20 +188,20 @@ class QuerySet:
         limit, offset, by = self._limit_by
         sql_params = {}
 
-        limit_expr = utils._get_expression(limit)
+        limit_expr = utils.get_expression(limit)
         _limit_sql, limit_params = utils.get_sql(limit_expr, uid_generator=uid_generator)
         limit_by_sql = " LIMIT {}".format(_limit_sql)
         sql_params.update(limit_params)
 
         if offset is not None:
-            offset_expr = utils._get_expression(offset)
+            offset_expr = utils.get_expression(offset)
             _offset_sql, offset_params = utils.get_sql(offset_expr, uid_generator=uid_generator)
             limit_by_sql += " OFFSET {}".format(_offset_sql)
             sql_params.update(offset_params)
 
         _by_sqls = []
         for item in by:
-            expression = utils._get_field_or_expression(item)
+            expression = utils.get_expression(item, str_is_field=True)
             sql, params = utils.get_sql(expression, uid_generator=uid_generator)
             _by_sqls.append(sql)
             sql_params.update(params)
@@ -216,13 +216,13 @@ class QuerySet:
         limit, offset = self._limit
         sql_params = {}
 
-        limit_expr = utils._get_expression(limit)
+        limit_expr = utils.get_expression(limit)
         _limit_sql, limit_params = utils.get_sql(limit_expr, uid_generator=uid_generator)
         limit_sql = " LIMIT {}".format(_limit_sql)
         sql_params.update(limit_params)
 
         if offset is not None:
-            offset_expr = utils._get_expression(offset)
+            offset_expr = utils.get_expression(offset)
             _offset_sql, offset_params = utils.get_sql(offset_expr, uid_generator=uid_generator)
             limit_sql += " OFFSET {}".format(_offset_sql)
             sql_params.update(offset_params)

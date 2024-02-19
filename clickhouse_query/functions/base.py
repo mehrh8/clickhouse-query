@@ -29,7 +29,8 @@ class Function(mixins.ASMixin, mixins.ArithmeticMixin):
         args_sqls_list = []
         sql_params = {}
         for item in self.args:
-            sql, params = utils.get_sql(item, uid_generator=uid_generator)
+            expression = utils.get_expression(item, str_is_field=True)
+            sql, params = utils.get_sql(expression, uid_generator=uid_generator)
             args_sqls_list.append(sql)
             sql_params.update(params)
         return args_sqls_list, sql_params
@@ -75,7 +76,7 @@ class AggregationFunction(Function):
             if combinator in self.combinator_dict:
                 combinator_function_args = self.combinator_dict[combinator].get("function_args", [])
                 for arg in combinator_function_args:
-                    expression = utils._get_expression(arg)
+                    expression = utils.get_expression(arg)
                     sql, params = utils.get_sql(expression, uid_generator=uid_generator)
                     args_sqls_list.append(sql)
                     sql_params.update(params)
@@ -98,7 +99,7 @@ class AggregationFunctionWithParams(AggregationFunction):
         agg_params_sql_list = []
         if self.agg_params is not None:
             for agg_param in self.agg_params:
-                expression = utils._get_expression(agg_param)
+                expression = utils.get_expression(agg_param)
                 sql, params = utils.get_sql(expression, uid_generator=uid_generator)
                 agg_params_sql_list.append(sql)
                 function_sql_params.update(params)

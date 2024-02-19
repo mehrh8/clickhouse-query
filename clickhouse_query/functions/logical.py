@@ -17,7 +17,7 @@ class _Logical(base.Function):
             uid_generator=uid_generator
         )
         for item, value in self.kwargs.items():
-            expression = utils._get_expression(value)
+            expression = utils.get_expression(value)
             condition = utils._extract_condition(item, expression)
             sql, params = utils.get_sql(condition, uid_generator=uid_generator)
             function_args_sqls_list.append(sql)
