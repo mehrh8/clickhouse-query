@@ -7,98 +7,139 @@ from clickhouse_query import functions, mixins, utils
 class QuerySet:
     def __init__(self):
         self._from = None
-        self._select_list = []
-        self._select_dict = []
-        self._distinct = False
-        self._distinct_on_list = []
-        self._prewhere_list = []
-        self._prewhere_dict = {}
-        self._where_list = []
-        self._where_dict = {}
-        self._group_by_list = []
-        self._having_list = []
-        self._having_dict = {}
-        self._order_by_list = []
+        self._select = []
+        self._distinct = None
+        self._prewhere = []
+        self._where = []
+        self._group_by = []
+        self._having = []
+        self._order_by = []
         self._limit = None
         self._limit_by = None
 
     def select(self, *args, **kwargs):
-        self._select_list = list(args)
-        self._select_dict = dict(kwargs)
+        if args and args[0] is None:
+            self._select = []
+            return self
+
+        self._select = []
+        for item in args:
+            expression = utils.get_expression(item, str_is_field=True)
+            self._select.append(expression)
+        for as_, item in kwargs.items():
+            expression = utils.get_expression(item, str_is_field=True)
+            expression.as_(as_)
+            self._select.append(expression)
         return self
 
-    def distinct(self, *distinct):
-        self._distinct = True
-        self._distinct_on_list = list(distinct)
+    def distinct(self, *args):
+        if args and args[0] is None:
+            self._distinct = None
+            return self
+
+        self._distinct = []
+        for item in args:
+            expression = utils.get_expression(item, str_is_field=True)
+            self._distinct.append(expression)
         return self
 
     def from_(self, from_):
-        self._from = from_
+        if from_ is None:
+            self._from = None
+            return self
+
+        self._from = utils.get_expression(from_, str_is_field=True)
         return self
 
     def prewhere(self, *args, **kwargs):
-        self._prewhere_list = list(args)
-        self._prewhere_dict = dict(kwargs)
+        if args and args[0] is None:
+            self._prewhere = []
+            return self
+
+        prewhere_dict_expr = {k: utils.get_expression(v) for k, v in kwargs.items()}
+        prewhere_condition_list = [utils._extract_condition(k, v) for k, v in prewhere_dict_expr.items()]
+        self._prewhere += list(args) + prewhere_condition_list
         return self
 
     def where(self, *args, **kwargs):
-        self._where_list = list(args)
-        self._where_dict = dict(kwargs)
+        if args and args[0] is None:
+            self._where = []
+            return self
+
+        where_dict_expr = {k: utils.get_expression(v) for k, v in kwargs.items()}
+        where_condition_list = [utils._extract_condition(k, v) for k, v in where_dict_expr.items()]
+        self._where += list(args) + where_condition_list
         return self
 
-    def group_by(self, *group_by):
-        self._group_by_list = list(group_by)
+    def group_by(self, *args):
+        if args and args[0] is None:
+            self._group_by = []
+            return self
+
+        self._group_by = []
+        for item in args:
+            expression = utils.get_expression(item, str_is_field=True)
+            self._group_by.append(expression)
         return self
 
     def having(self, *args, **kwargs):
-        self._having_list = list(args)
-        self._having_dict = dict(kwargs)
+        if args and args[0] is None:
+            self._having = []
+            return self
+
+        having_dict_expr = {k: utils.get_expression(v) for k, v in kwargs.items()}
+        having_condition_list = [utils._extract_condition(k, v) for k, v in having_dict_expr.items()]
+        self._having += list(args) + having_condition_list
         return self
 
-    def order_by(self, *order_by):
-        self._order_by_list = list(order_by)
+    def order_by(self, *args):
+        if args and args[0] is None:
+            self._order_by = []
+            return self
+
+        self._order_by = []
+        for item in args:
+            expression = utils.get_expression(item, str_is_field=True)
+            self._order_by.append(expression)
         return self
 
     def limit(self, limit, *, offset=None):
+        if limit is None and offset is None:
+            self._limit = None
+            return self
+
+        if limit is not None:
+            limit = utils.get_expression(limit)
+        if offset is not None:
+            offset = utils.get_expression(offset)
+
         self._limit = (limit, offset)
         return self
 
     def limit_by(self, limit, *by, offset=None):
-        assert len(by) != 0
-        self._limit_by = (limit, offset, list(by))
+        if limit is None:
+            self._limit_by = None
+            return self
+
+        limit = utils.get_expression(limit)
+        if offset is not None:
+            offset = utils.get_expression(offset)
+
+        _by = []
+        for item in by:
+            expression = utils.get_expression(item, str_is_field=True)
+            _by.append(expression)
+
+        self._limit_by = (limit, offset, _by)
         return self
 
-    def _get_distinct_sql(self, uid_generator):
-        if not self._distinct:
-            return "", {}
-        distinct_sql = " DISTINCT"
-        sql_params = {}
-        if self._distinct_on_list:
-            sqls = []
-            for item in self._distinct_on_list:
-                expression = utils.get_expression(item, str_is_field=True)
-                sql, params = utils.get_sql(expression, uid_generator=uid_generator)
-                sqls.append(sql)
-                sql_params.update(params)
-
-            distinct_sql += " ON ({})".format(", ".join(sqls))
-        return distinct_sql, sql_params
-
     def _get_select_sql(self, uid_generator):
-        if not self._select_list and not self._select_dict:
+        if not self._select:
             return " *", {}
 
         sql_params = {}
         sqls = []
-        for item in self._select_list:
-            expression = utils.get_expression(item, str_is_field=True)
-            sql, params = utils.get_sql(expression, uid_generator=uid_generator)
-            sqls.append(sql)
-            sql_params.update(params)
-
-        for as_, item in self._select_dict.items():
-            expression = utils.get_expression(item, str_is_field=True)
-            expression.as_(as_)
+        for expression in self._select:
             sql, params = utils.get_sql(expression, uid_generator=uid_generator)
             sqls.append(sql)
             sql_params.update(params)
@@ -106,48 +147,53 @@ class QuerySet:
         select_sql = " {}".format(", ".join(sqls))
         return select_sql, sql_params
 
+    def _get_distinct_sql(self, uid_generator):
+        if self._distinct is None:
+            return "", {}
+        distinct_sql = " DISTINCT"
+        sql_params = {}
+        if self._distinct:
+            sqls = []
+            for expression in self._distinct:
+                sql, params = utils.get_sql(expression, uid_generator=uid_generator)
+                sqls.append(sql)
+                sql_params.update(params)
+
+            distinct_sql += " ON ({})".format(", ".join(sqls))
+        return distinct_sql, sql_params
+
     def _get_from_sql(self, uid_generator):
         if self._from is None:
             return "", {}
 
-        expression = utils.get_expression(self._from, str_is_field=True)
+        expression = self._from
         sql, sql_params = utils.get_sql(expression, uid_generator=uid_generator)
         from_sql = " FROM {}".format(sql)
         return from_sql, sql_params
 
     def _get_prewhere_sql(self, uid_generator):
-
-        prewhere_dict_expr = {k: utils.get_expression(v) for k, v in self._prewhere_dict.items()}
-        prewhere_dict_condition_list = [utils._extract_condition(k, v) for k, v in prewhere_dict_expr.items()]
-        condition_list = self._prewhere_list + prewhere_dict_condition_list
-
-        if not condition_list:
+        if not self._prewhere:
             return "", {}
 
-        sql, sql_params = utils.get_sql(functions.And(*condition_list), uid_generator=uid_generator)
+        sql, sql_params = utils.get_sql(functions.And(*self._prewhere), uid_generator=uid_generator)
         prewhere_sql = " PREWHERE {}".format(sql)
         return prewhere_sql, sql_params
 
     def _get_where_sql(self, uid_generator):
-        where_dict_expr = {k: utils.get_expression(v) for k, v in self._where_dict.items()}
-        where_dict_condition_list = [utils._extract_condition(k, v) for k, v in where_dict_expr.items()]
-        condition_list = self._where_list + where_dict_condition_list
-
-        if not condition_list:
+        if not self._where:
             return "", {}
 
-        sql, sql_params = utils.get_sql(functions.And(*condition_list), uid_generator=uid_generator)
+        sql, sql_params = utils.get_sql(functions.And(*self._where), uid_generator=uid_generator)
         where_sql = " WHERE {}".format(sql)
         return where_sql, sql_params
 
     def _get_group_by_sql(self, uid_generator):
-        if not self._group_by_list:
+        if not self._group_by:
             return "", {}
 
         sql_params = {}
         sqls = []
-        for item in self._group_by_list:
-            expression = utils.get_expression(item, str_is_field=True)
+        for expression in self._group_by:
             sql, params = utils.get_sql(expression, uid_generator=uid_generator)
             sqls.append(sql)
             sql_params.update(params)
@@ -156,25 +202,20 @@ class QuerySet:
         return group_by_sql, sql_params
 
     def _get_having_sql(self, uid_generator):
-        having_dict_expr = {k: utils.get_expression(v) for k, v in self._having_dict.items()}
-        having_dict_condition_list = [utils._extract_condition(k, v) for k, v in having_dict_expr.items()]
-        condition_list = self._having_list + having_dict_condition_list
-
-        if not condition_list:
+        if not self._having:
             return "", {}
 
-        sql, sql_params = utils.get_sql(functions.And(*condition_list), uid_generator=uid_generator)
+        sql, sql_params = utils.get_sql(functions.And(*self._having), uid_generator=uid_generator)
         having_sql = " HAVING {}".format(sql)
         return having_sql, sql_params
 
     def _get_order_by_sql(self, uid_generator):
-        if not self._order_by_list:
+        if not self._order_by:
             return "", {}
 
         sql_params = {}
         sqls = []
-        for item in self._order_by_list:
-            expression = utils.get_expression(item, str_is_field=True)
+        for expression in self._order_by:
             sql, params = utils.get_sql(expression, uid_generator=uid_generator)
             sqls.append(sql)
             sql_params.update(params)
@@ -182,53 +223,49 @@ class QuerySet:
         order_by_sql = " ORDER BY {}".format(", ".join(sqls))
         return order_by_sql, sql_params
 
+    def _get_limit_sql(self, uid_generator):
+        if self._limit is None or self._limit == (None, None):
+            return "", {}
+
+        limit_expr, offset_expr = self._limit
+        sql_params = {}
+
+        if limit_expr is not None:
+            _limit_sql, limit_params = utils.get_sql(limit_expr, uid_generator=uid_generator)
+            limit_sql = " LIMIT {}".format(_limit_sql)
+            sql_params.update(limit_params)
+
+        if offset_expr is not None:
+            _offset_sql, offset_params = utils.get_sql(offset_expr, uid_generator=uid_generator)
+            limit_sql += " OFFSET {}".format(_offset_sql)
+            sql_params.update(offset_params)
+
+        return limit_sql, sql_params
+
     def _get_limit_by_sql(self, uid_generator):
         if self._limit_by is None:
             return "", {}
 
-        limit, offset, by = self._limit_by
+        limit_expr, offset_expr, by_exprs = self._limit_by
         sql_params = {}
 
-        limit_expr = utils.get_expression(limit)
         _limit_sql, limit_params = utils.get_sql(limit_expr, uid_generator=uid_generator)
         limit_by_sql = " LIMIT {}".format(_limit_sql)
         sql_params.update(limit_params)
 
-        if offset is not None:
-            offset_expr = utils.get_expression(offset)
+        if offset_expr is not None:
             _offset_sql, offset_params = utils.get_sql(offset_expr, uid_generator=uid_generator)
             limit_by_sql += " OFFSET {}".format(_offset_sql)
             sql_params.update(offset_params)
 
         _by_sqls = []
-        for item in by:
-            expression = utils.get_expression(item, str_is_field=True)
+        for expression in by_exprs:
             sql, params = utils.get_sql(expression, uid_generator=uid_generator)
             _by_sqls.append(sql)
             sql_params.update(params)
         limit_by_sql += " BY {}".format(", ".join(_by_sqls))
 
         return limit_by_sql, sql_params
-
-    def _get_limit_sql(self, uid_generator):
-        if self._limit is None:
-            return "", {}
-
-        limit, offset = self._limit
-        sql_params = {}
-
-        limit_expr = utils.get_expression(limit)
-        _limit_sql, limit_params = utils.get_sql(limit_expr, uid_generator=uid_generator)
-        limit_sql = " LIMIT {}".format(_limit_sql)
-        sql_params.update(limit_params)
-
-        if offset is not None:
-            offset_expr = utils.get_expression(offset)
-            _offset_sql, offset_params = utils.get_sql(offset_expr, uid_generator=uid_generator)
-            limit_sql += " OFFSET {}".format(_offset_sql)
-            sql_params.update(offset_params)
-
-        return limit_sql, sql_params
 
     def __sql__(self, *, uid_generator):
         distinct_sql, distinct_params = self._get_distinct_sql(uid_generator=uid_generator)
