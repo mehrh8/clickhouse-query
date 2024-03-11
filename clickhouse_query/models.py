@@ -99,8 +99,7 @@ class QuerySet:
 
         self._order_by = []
         for item in args:
-            expression = utils.get_expression(item, str_is_field=True)
-            self._order_by.append(expression)
+            self._order_by.append(OrderByExpression.get_from_str(item))
         return self
 
     def limit(self, limit, *, offset=None):
@@ -388,3 +387,23 @@ class Value(mixins.ASMixin, mixins.ArithmeticMixin):
         uid = uid_generator.get()
         value_sql, value_param = _get_value_sql(self.arg)
         return value_sql.format(uid=uid), {uid: value_param}
+
+
+class OrderByExpression:
+    def __init__(self, expr, asc=True):
+        self.expr = expr
+        self.asc = asc
+
+    def __sql__(self, *, uid_generator):
+        sql, sql_params = utils.get_sql(self.expr, uid_generator=uid_generator)
+        return "{} {}".format(sql, "ASC" if self.asc else "DESC"), sql_params
+
+    @classmethod
+    def get_from_str(cls, arg):
+        if arg.startswith("-"):
+            expr = utils.get_expression(arg[1:], str_is_field=True)
+            asc = False
+        else:
+            expr = utils.get_expression(arg, str_is_field=True)
+            asc = True
+        return cls(expr, asc=asc)

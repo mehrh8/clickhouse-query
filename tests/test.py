@@ -43,3 +43,7 @@ class TestClickhouseQuery(unittest.TestCase):
         q2 = q1.prewhere(b__lt=4)
         print("#5", ch.get_sql(q1))
         print("#6", ch.get_sql(q2))
+
+    def test_order_by_desc_asc(self):
+        q = ch.QuerySet().select(a="b").order_by("-b", "c")
+        print("#7", ch.get_sql(q))
