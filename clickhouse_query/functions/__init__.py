@@ -67,7 +67,7 @@ from clickhouse_query.functions.date import (
 )
 from clickhouse_query.functions.in_ import In
 from clickhouse_query.functions.logical import And, Not, Or, Xor
-from clickhouse_query.functions.nullable import IsNull
+from clickhouse_query.functions.nullable import IsNotNull, IsNull
 from clickhouse_query.functions.searching_in_strings import ILike, Like
 from clickhouse_query.functions.strings import Concat
 
@@ -123,6 +123,7 @@ __all__ = [
     "Xor",
     # nullable
     "IsNull",
+    "IsNotNull",
     # searching_in_strings
     "Like",
     "ILike",

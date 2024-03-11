@@ -39,5 +39,7 @@ class TestClickhouseQuery(unittest.TestCase):
         print("#4", ch.get_sql(q))
 
     def test_same_filter(self):
-        q = ch.QuerySet().select(a="b").prewhere(b__lt=4).prewhere(b__lt=5)
-        print("#5", ch.get_sql(q))
+        q1 = ch.QuerySet().select(a="b")
+        q2 = q1.prewhere(b__lt=4)
+        print("#5", ch.get_sql(q1))
+        print("#6", ch.get_sql(q2))

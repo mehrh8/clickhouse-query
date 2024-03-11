@@ -1,3 +1,9 @@
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from clickhouse_query.models import Value
+
+
 class UIDGenerator:
     def __init__(self, prefix=None):
         if prefix is None:
@@ -24,7 +30,7 @@ def get_sql(arg, uid_generator=None):
     return sql, sql_params
 
 
-def _extract_condition(item, value):
+def _extract_condition(item: str, value: "Value"):
     from clickhouse_query import functions, models
 
     *_field, op = item.split("__")
@@ -63,7 +69,12 @@ def _extract_condition(item, value):
     elif op == "iendswith":
         condition = functions.ILike(field, functions.Concat(models.Value("%"), value))
     elif op == "isnull":
-        condition = functions.IsNull(field)
+        if value.arg is True:
+            condition = functions.IsNull(field)
+        elif value.arg is False:
+            condition = functions.IsNotNull(field)
+        else:
+            raise ValueError("isnull value should be True or False")
     else:  # equals
         field = models.F(_field + [op])
         condition = functions.Equals(field, value)
