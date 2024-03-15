@@ -10,6 +10,8 @@ pip install clickhouse-query
 
 ## Usage
 
+**!!! This repository is not complete, so the following codes may not work in current version. !!!**
+
 ```python
 import clickhouse_query as ch
 
