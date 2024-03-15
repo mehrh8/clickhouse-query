@@ -1,4 +1,5 @@
 # ClickHouse Query
+**!!! This repository is not complete, so the following codes may not work in current version. !!!**
 
 Clickhouse Query is a Python library for building complex ClickHouse queries by a fluent API and a set of functions.
 
