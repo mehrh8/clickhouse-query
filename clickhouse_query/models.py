@@ -1,7 +1,7 @@
 import datetime
 from zoneinfo import ZoneInfo
 
-from clickhouse_query import functions, mixins, utils
+from clickhouse_query import Function, mixins, utils
 
 
 class QuerySet:
@@ -99,7 +99,7 @@ class QuerySet:
 
         self._order_by = []
         for item in args:
-            self._order_by.append(OrderByExpression.get_from_str(item))
+            self._order_by.append(OrderBy.get_from_str(item))
         return self
 
     def limit(self, limit, *, offset=None):
@@ -174,7 +174,7 @@ class QuerySet:
         if not self._prewhere:
             return "", {}
 
-        sql, sql_params = utils.get_sql(functions.And(*self._prewhere), uid_generator=uid_generator)
+        sql, sql_params = utils.get_sql(Q(*self._prewhere), uid_generator=uid_generator)
         prewhere_sql = " PREWHERE {}".format(sql)
         return prewhere_sql, sql_params
 
@@ -182,7 +182,7 @@ class QuerySet:
         if not self._where:
             return "", {}
 
-        sql, sql_params = utils.get_sql(functions.And(*self._where), uid_generator=uid_generator)
+        sql, sql_params = utils.get_sql(Q(*self._where), uid_generator=uid_generator)
         where_sql = " WHERE {}".format(sql)
         return where_sql, sql_params
 
@@ -204,7 +204,7 @@ class QuerySet:
         if not self._having:
             return "", {}
 
-        sql, sql_params = utils.get_sql(functions.And(*self._having), uid_generator=uid_generator)
+        sql, sql_params = utils.get_sql(Q(*self._having), uid_generator=uid_generator)
         having_sql = " HAVING {}".format(sql)
         return having_sql, sql_params
 
@@ -389,7 +389,7 @@ class Value(mixins.ASMixin, mixins.ArithmeticMixin):
         return value_sql.format(uid=uid), {uid: value_param}
 
 
-class OrderByExpression:
+class OrderBy:
     def __init__(self, expr, asc=True):
         self.expr = expr
         self.asc = asc
@@ -407,3 +407,22 @@ class OrderByExpression:
             expr = utils.get_expression(arg, str_is_field=True)
             asc = True
         return cls(expr, asc=asc)
+
+
+class Q(Function):
+    def __init__(self, *args, _connector="and", **kwargs) -> None:
+        args = list(args)
+
+        if len(args) + len(kwargs) == 0:
+            raise ValueError("At least one argument is required")
+
+        if len(args) + len(kwargs) == 1:
+            _connector = ""
+
+        for item, value in kwargs.items():
+            expression = utils.get_expression(value)
+            condition = utils._extract_condition(item, expression)
+            args.append(condition)
+
+        super().__init__(_connector)
+        self(*args)

@@ -16,7 +16,7 @@ class UIDGenerator:
         return self.prefix + str(self.prev_num)
 
 
-def get_sql(arg, uid_generator=None):
+def get_sql(arg, uid_generator: UIDGenerator | None = None):
     from clickhouse_query import mixins
 
     if uid_generator is None:
@@ -132,3 +132,14 @@ def is_iterable(obj):
         return True
     except TypeError:
         return False
+
+
+def get_args_sqls(args: list, *, uid_generator: UIDGenerator) -> tuple[list[str], dict]:
+    args_sqls_list = []
+    sql_params = {}
+    for item in args:
+        expression = get_expression(item, str_is_field=True)
+        sql, params = get_sql(expression, uid_generator=uid_generator)
+        args_sqls_list.append(sql)
+        sql_params.update(params)
+    return args_sqls_list, sql_params

@@ -1,6 +1,7 @@
 import unittest
 
 import clickhouse_query as ch
+from clickhouse_query import functions
 
 
 class TestClickhouseQuery(unittest.TestCase):
@@ -13,7 +14,7 @@ class TestClickhouseQuery(unittest.TestCase):
         print(ch.get_sql(q))
 
     def test_field(self):
-        q = ch.QuerySet().select(a="b").prewhere(ch.Equals("b", ch.Value("salam")))
+        q = ch.QuerySet().select(a="b").prewhere(functions.Equals("b", ch.Value("salam")))
         print(ch.get_sql(q))
 
     def test_multi_filter_on_field(self):
@@ -21,7 +22,7 @@ class TestClickhouseQuery(unittest.TestCase):
         print(ch.get_sql(q))
 
     def test_int(self):
-        q = ch.QuerySet().select(a="b").prewhere(ch.Equals("b", 2))
+        q = ch.QuerySet().select(a="b").prewhere(functions.Equals("b", 2))
         print("#1", ch.get_sql(q))
 
     def test_isnull(self):
@@ -47,3 +48,7 @@ class TestClickhouseQuery(unittest.TestCase):
     def test_order_by_desc_asc(self):
         q = ch.QuerySet().select(a="b").order_by("-b", "c")
         print("#7", ch.get_sql(q))
+
+    def test_custom_function(self):
+        q = ch.QuerySet().select(a=functions.mehrshad(1)(ch.Value("b")))
+        print("#8", ch.get_sql(q))

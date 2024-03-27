@@ -26,37 +26,37 @@ class ASMixin:
 
 class ArithmeticMixin:
     def __add__(self, other):
-        from . import functions
+        from clickhouse_query import functions
 
         return functions.Plus(self, other)
 
     def __sub__(self, other):
-        from . import functions
+        from clickhouse_query import functions
 
         return functions.Minus(self, other)
 
     def __mul__(self, other):
-        from . import functions
+        from clickhouse_query import functions
 
         return functions.Multiply(self, other)
 
     def __truediv__(self, other):
-        from . import functions
+        from clickhouse_query import functions
 
         return functions.Divide(self, other)
 
     def __floordiv__(self, other):
-        from . import functions
+        from clickhouse_query import functions
 
         # TODO: cast self to Float64
         return functions.IntDiv(self, other)
 
     def __mod__(self, other):
-        from . import functions
+        from clickhouse_query import functions
 
         return functions.Modulo(self, other)
 
     def __neg__(self):
-        from . import functions
+        from clickhouse_query import functions
 
         return functions.Negate(self)
