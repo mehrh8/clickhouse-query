@@ -1,7 +1,11 @@
+import copy
+
+
 class ASMixin:
     _AS_FORCE = False
 
     def as_(self, as_):
+        self = copy.deepcopy(self)
         self._as = as_
         return self
 

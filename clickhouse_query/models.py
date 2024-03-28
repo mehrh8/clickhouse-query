@@ -1,3 +1,4 @@
+import copy
 import datetime
 from zoneinfo import ZoneInfo
 
@@ -5,7 +6,7 @@ from clickhouse_query import Function, mixins, utils
 
 
 class QuerySet:
-    def __init__(self):
+    def __init__(self, inplace=False):
         self._from = None
         self._select = []
         self._distinct = None
@@ -17,7 +18,24 @@ class QuerySet:
         self._limit = None
         self._limit_by = None
 
+        self.inplace = inplace
+
+    def _clone(self):
+        if not self.inplace:
+            self = copy.deepcopy(self)
+        return self
+
+    def disable_inplace(self):
+        self.inplace = False
+        return self
+
+    def enable_inplace(self):
+        self.inplace = True
+        return self
+
     def select(self, *args, **kwargs):
+        self = self._clone()
+
         if args and args[0] is None:
             self._select = []
             return self
@@ -33,6 +51,8 @@ class QuerySet:
         return self
 
     def distinct(self, *args):
+        self = self._clone()
+
         if args and args[0] is None:
             self._distinct = None
             return self
@@ -44,6 +64,8 @@ class QuerySet:
         return self
 
     def from_(self, from_):
+        self = self._clone()
+
         if from_ is None:
             self._from = None
             return self
@@ -52,6 +74,8 @@ class QuerySet:
         return self
 
     def prewhere(self, *args, **kwargs):
+        self = self._clone()
+
         if args and args[0] is None:
             self._prewhere = []
             return self
@@ -62,6 +86,8 @@ class QuerySet:
         return self
 
     def where(self, *args, **kwargs):
+        self = self._clone()
+
         if args and args[0] is None:
             self._where = []
             return self
@@ -72,6 +98,8 @@ class QuerySet:
         return self
 
     def group_by(self, *args):
+        self = self._clone()
+
         if args and args[0] is None:
             self._group_by = []
             return self
@@ -83,6 +111,8 @@ class QuerySet:
         return self
 
     def having(self, *args, **kwargs):
+        self = self._clone()
+
         if args and args[0] is None:
             self._having = []
             return self
@@ -93,16 +123,22 @@ class QuerySet:
         return self
 
     def order_by(self, *args):
+        self = self._clone()
+
         if args and args[0] is None:
             self._order_by = []
             return self
 
         self._order_by = []
         for item in args:
-            self._order_by.append(OrderBy.get_from_str(item))
+            if not isinstance(item, OrderBy):
+                item = OrderBy.get_from_str(item)
+            self._order_by.append(item)
         return self
 
     def limit(self, limit, *, offset=None):
+        self = self._clone()
+
         if limit is None and offset is None:
             self._limit = None
             return self
@@ -116,6 +152,8 @@ class QuerySet:
         return self
 
     def limit_by(self, limit, *by, offset=None):
+        self = self._clone()
+
         if limit is None:
             self._limit_by = None
             return self
