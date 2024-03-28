@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="clickhouse-query",
-    version="0.0.6",
+    version="0.0.7",
     author="Mehrshad Hosseini",
     author_email="mehrh8@gmail.com",
     description="clickhouse query",
