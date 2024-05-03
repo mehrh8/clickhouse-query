@@ -6,7 +6,7 @@ from clickhouse_query import Function, mixins, utils
 
 
 class QuerySet:
-    def __init__(self, inplace=False):
+    def __init__(self, _from=None, inplace=False, clickhouse_client=None):
         self._from = None
         self._select = []
         self._distinct = None
@@ -19,6 +19,9 @@ class QuerySet:
         self._limit_by = None
 
         self.inplace = inplace
+        self.clickhouse_client = clickhouse_client
+
+        self.enable_inplace().from_(_from).disable_inplace()
 
     def _clone(self):
         if not self.inplace:
@@ -46,7 +49,7 @@ class QuerySet:
             self._select.append(expression)
         for as_, item in kwargs.items():
             expression = utils.get_expression(item, str_is_field=True)
-            expression.as_(as_)
+            expression = expression.as_(as_)
             self._select.append(expression)
         return self
 
@@ -345,7 +348,13 @@ class QuerySet:
         )
         return sql, sql_params
 
-    def execute(self, clickhouse_client):
+    def execute(self, clickhouse_client=None):
+        if clickhouse_client is None:
+            clickhouse_client = self.clickhouse_client
+
+        if callable(clickhouse_client):
+            clickhouse_client = clickhouse_client()
+
         sql, sql_params = utils.get_sql(self)
 
         values_list, column__type = clickhouse_client.execute(sql, params=sql_params, with_column_types=True)

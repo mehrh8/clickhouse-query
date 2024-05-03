@@ -27,47 +27,11 @@ class Function(mixins.ASMixin, mixins.ArithmeticMixin):
         return sql, sql_params
 
 
-class AggregationFunction(Function):
-    combinators_order = ["If"]
-
-    def __init__(self, function_name):
-        super().__init__(function_name)
-        self.combinator_dict = {}
-
-    def get_function_name(self) -> str:
-        get_function_name = self.get_function_name()
-        for combinator in self.combinators_order:
-            if combinator in self.combinator_dict:
-                get_function_name += "{combinator}".format(combinator=combinator)
-        return get_function_name
-
-    def __sql__(self):
-        for combinator in self.combinators_order:
-            if combinator in self.combinator_dict:
-                combinator_function_args = self.combinator_dict[combinator].get("args", [])
-                self.args_list[-1].extend(combinator_function_args)
-        return super().__sql__()
-
-    def __getattr__(self, item: str):
-        def combinator_method(*args):
-            combinator = item[0].upper() + item[1:]
-            self.combinator_dict[combinator] = {"args": args}
-            return self
-
-        return combinator_method
-
-
 class _FunctionBuilder:
     def __getattr__(self, item: str) -> Function:
-        item = item[0].lower() + item[1:]
+        if item[-1] == "_":
+            item = item[:-1]
         return Function(item)
 
 
-class _AggregationFunctionBuilder:
-    def __getattr__(self, item) -> AggregationFunction:
-        item = item[0].lower() + item[1:]
-        return AggregationFunction(item)
-
-
 functions = _FunctionBuilder()
-aggregation_functions = _AggregationFunctionBuilder()

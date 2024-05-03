@@ -38,46 +38,46 @@ def _extract_condition(item: str, value: "Value"):
     field = models.F(_field)
     if op == "exact":
         if value is None:
-            condition = functions.IsNull(field)
+            condition = functions.isNull(field)
         else:
-            condition = functions.Equals(field, value)
+            condition = functions.equals(field, value)
     elif op == "iexact":
         if value is None:
-            condition = functions.IsNull(field)
+            condition = functions.isNull(field)
         else:
-            condition = functions.ILike(field, value)
+            condition = functions.iLike(field, value)
     elif op == "contains":
-        condition = functions.Like(field, functions.Concat(models.Value("%"), value, models.Value("%")))
+        condition = functions.like(field, functions.concat(models.Value("%"), value, models.Value("%")))
     elif op == "icontains":
-        condition = functions.ILike(field, functions.Concat(models.Value("%"), value, models.Value("%")))
+        condition = functions.iLike(field, functions.concat(models.Value("%"), value, models.Value("%")))
     elif op == "in":
-        condition = functions.In(field, value)
+        condition = functions.in_(field, value)
     elif op == "gt":
-        condition = functions.Greater(field, value)
+        condition = functions.greater(field, value)
     elif op == "gte":
-        condition = functions.GreaterOrEquals(field, value)
+        condition = functions.greaterOrEquals(field, value)
     elif op == "lt":
-        condition = functions.Less(field, value)
+        condition = functions.less(field, value)
     elif op == "lte":
-        condition = functions.LessOrEquals(field, value)
+        condition = functions.lessOrEquals(field, value)
     elif op == "startswith":
-        condition = functions.Like(field, functions.Concat(value, models.Value("%")))
+        condition = functions.like(field, functions.concat(value, models.Value("%")))
     elif op == "istartswith":
-        condition = functions.ILike(field, functions.Concat(value, models.Value("%")))
+        condition = functions.iLike(field, functions.concat(value, models.Value("%")))
     elif op == "endswith":
-        condition = functions.Like(field, functions.Concat(models.Value("%"), value))
+        condition = functions.like(field, functions.concat(models.Value("%"), value))
     elif op == "iendswith":
-        condition = functions.ILike(field, functions.Concat(models.Value("%"), value))
+        condition = functions.iLike(field, functions.concat(models.Value("%"), value))
     elif op == "isnull":
         if value.arg is True:
-            condition = functions.IsNull(field)
+            condition = functions.isNull(field)
         elif value.arg is False:
-            condition = functions.IsNotNull(field)
+            condition = functions.isNotNull(field)
         else:
             raise ValueError("isnull value should be True or False")
     else:  # equals
         field = models.F(_field + [op])
-        condition = functions.Equals(field, value)
+        condition = functions.equals(field, value)
 
     return condition
 
@@ -88,25 +88,25 @@ def _apply_operator(field, op):
     if op[0] == "_":  # nested
         field = field._arg_extend("." + op[1:])
     elif op == "year":
-        field = functions.ToYear(field)
+        field = functions.toYear(field)
     elif op == "month":
-        field = functions.ToMonth(field)
+        field = functions.toMonth(field)
     elif op == "day":
-        field = functions.ToDayOfYear(field)
+        field = functions.toDayOfYear(field)
     elif op == "week":
-        field = functions.ToWeek(field)
+        field = functions.toWeek(field)
     elif op == "week_day":
-        field = functions.ToDayOfWeek(field)
+        field = functions.toDayOfWeek(field)
     elif op == "quarter":
-        field = functions.ToQuarter(field)
+        field = functions.toQuarter(field)
     elif op == "time":
-        field = functions.ToTime(field)
+        field = functions.toTime(field)
     elif op == "hour":
-        field = functions.ToHour(field)
+        field = functions.toHour(field)
     elif op == "minute":
-        field = functions.ToMinute(field)
+        field = functions.toMinute(field)
     elif op == "second":
-        field = functions.ToSecond(field)
+        field = functions.toSecond(field)
     else:
         # not changed
         return field._arg_extend("__" + op)

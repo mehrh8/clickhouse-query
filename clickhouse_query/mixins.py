@@ -32,35 +32,35 @@ class ArithmeticMixin:
     def __add__(self, other):
         from clickhouse_query import functions
 
-        return functions.Plus(self, other)
+        return functions.plus(self, other)
 
     def __sub__(self, other):
         from clickhouse_query import functions
 
-        return functions.Minus(self, other)
+        return functions.minus(self, other)
 
     def __mul__(self, other):
         from clickhouse_query import functions
 
-        return functions.Multiply(self, other)
+        return functions.multiply(self, other)
 
     def __truediv__(self, other):
         from clickhouse_query import functions
 
-        return functions.Divide(self, other)
+        return functions.divide(self, other)
 
     def __floordiv__(self, other):
         from clickhouse_query import functions
 
         # TODO: cast self to Float64
-        return functions.IntDiv(self, other)
+        return functions.intDiv(self, other)
 
     def __mod__(self, other):
         from clickhouse_query import functions
 
-        return functions.Modulo(self, other)
+        return functions.modulo(self, other)
 
     def __neg__(self):
         from clickhouse_query import functions
 
-        return functions.Negate(self)
+        return functions.negate(self)

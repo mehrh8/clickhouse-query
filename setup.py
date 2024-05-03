@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="clickhouse-query",
-    version="0.0.7",
+    version="0.1.0",
     author="Mehrshad Hosseini",
     author_email="mehrh8@gmail.com",
     description="clickhouse query",
@@ -20,6 +20,6 @@ setuptools.setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    packages=setuptools.find_packages(".", exclude=["tests*"]),
+    packages=["clickhouse_query"],
     python_requires=">=3.6",
 )
