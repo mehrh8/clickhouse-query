@@ -52,6 +52,8 @@ def _extract_condition(item: str, value: "Value"):
         condition = functions.iLike(field, functions.concat(models.Value("%"), value, models.Value("%")))
     elif op == "in":
         condition = functions.in_(field, value)
+    elif op == "notin":
+        condition = functions.notIn(field, value)
     elif op == "gt":
         condition = functions.greater(field, value)
     elif op == "gte":
