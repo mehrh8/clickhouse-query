@@ -124,3 +124,17 @@ def test_limit_by():
 
     q = ch.QuerySet().limit_by(2, "col1", "col2")
     assert ch.get_sql(q) == ("SELECT * LIMIT %(__U_1)f BY col1, col2", {"__U_1": 2})
+
+
+def test_custom_inline_condition(mocker):
+    mocker.patch("clickhouse_query.config.INLINE_CONDITIONS", {"something": ch.functions.something})
+
+    q = ch.QuerySet().where(a__something=1)
+    assert ch.get_sql(q) == ("SELECT * WHERE (something(a, %(__U_1)f))", {"__U_1": 1})
+
+
+def test_custom_inline_function(mocker):
+    mocker.patch("clickhouse_query.config.INLINE_FUNCTIONS", {"something": ch.functions.something})
+
+    q = ch.QuerySet().where(a__something__lte=1)
+    assert ch.get_sql(q) == ("SELECT * WHERE (lessOrEquals(something(a), %(__U_1)f))", {"__U_1": 1})
