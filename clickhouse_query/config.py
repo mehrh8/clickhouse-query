@@ -1,4 +1,5 @@
-from clickhouse_query import functions, models
+from clickhouse_query import functions
+from clickhouse_query.core.expressions import Value
 
 __all__ = ["INLINE_CONDITIONS", "INLINE_FUNCTIONS"]
 
@@ -18,11 +19,11 @@ def _iexact(field, value):
 
 
 def _contains(field, value):
-    return functions.like(field, functions.concat(models.Value("%"), value, models.Value("%")))
+    return functions.like(field, functions.concat(Value("%"), value, Value("%")))
 
 
 def _icontains(field, value):
-    return functions.iLike(field, functions.concat(models.Value("%"), value, models.Value("%")))
+    return functions.iLike(field, functions.concat(Value("%"), value, Value("%")))
 
 
 def _isnull(field, value):
@@ -45,10 +46,10 @@ INLINE_CONDITIONS = {
     "gte": functions.greaterOrEquals,
     "lt": functions.less,
     "lte": functions.lessOrEquals,
-    "startswith": lambda field, value: functions.like(field, functions.concat(value, models.Value("%"))),
-    "istartswith": lambda field, value: functions.iLike(field, functions.concat(value, models.Value("%"))),
-    "endswith": lambda field, value: functions.like(field, functions.concat(models.Value("%"), value)),
-    "iendswith": lambda field, value: functions.iLike(field, functions.concat(models.Value("%"), value)),
+    "startswith": lambda field, value: functions.like(field, functions.concat(value, Value("%"))),
+    "istartswith": lambda field, value: functions.iLike(field, functions.concat(value, Value("%"))),
+    "endswith": lambda field, value: functions.like(field, functions.concat(Value("%"), value)),
+    "iendswith": lambda field, value: functions.iLike(field, functions.concat(Value("%"), value)),
     "isnull": _isnull,
 }
 

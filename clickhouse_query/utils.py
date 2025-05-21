@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from clickhouse_query.models import Value
+    from clickhouse_query.core.expressions import Value
 
 
 class UIDGenerator:
@@ -31,17 +31,18 @@ def get_sql(arg, uid_generator: UIDGenerator | None = None):
 
 
 def _extract_condition(item: str, value: "Value"):
-    from clickhouse_query import functions, models
+    from clickhouse_query import functions
     from clickhouse_query.config import INLINE_CONDITIONS
+    from clickhouse_query.core.expressions import F
 
     *_field, op = item.split("__")
 
-    field = models.F(_field)
+    field = F(_field)
 
     if op in INLINE_CONDITIONS:
         return INLINE_CONDITIONS[op](field, value)
 
-    field = models.F(_field + [op])
+    field = F(_field + [op])
     return functions.equals(field, value)
 
 
@@ -57,15 +58,15 @@ def _apply_operator(field, op):
 
 
 def get_expression(v, str_is_field=False):
-    from clickhouse_query import models
+    from clickhouse_query.core.expressions import F, Value
 
     if str_is_field and isinstance(v, str):
-        return models.F(v)
+        return F(v)
 
     if hasattr(v, "__sql__"):
         return v
 
-    return models.Value(v)
+    return Value(v)
 
 
 def is_iterable(obj):
@@ -74,3 +75,11 @@ def is_iterable(obj):
         return True
     except TypeError:
         return False
+
+
+__all__ = [
+    "UIDGenerator",
+    "get_sql",
+    "get_expression",
+    "is_iterable",
+]
